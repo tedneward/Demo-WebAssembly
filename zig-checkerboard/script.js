@@ -11,9 +11,62 @@ var importObject = {
     },
 };
 
-WebAssembly.instantiateStreaming(fetch("zig-out/bin/checkerboard.wasm"), importObject).then((result) => {
+async function initWasm() {
+    const response = await fetch("zig-out/bin/checkerboard.wasm");
+    const { instance } = await WebAssembly.instantiateStreaming(response, importObject);
+    const exports = instance.exports;
     const wasmMemoryArray = new Uint8Array(memory.buffer);
 
+    // Automatically set canvas size as defined in `checkerboard.zig`
+    const checkerboardSize = instance.exports.getCheckerboardSize();
+    const canvas = document.getElementById("checkerboard");
+    canvas.width = checkerboardSize;
+    canvas.height = checkerboardSize;
+
+    const context = canvas.getContext("2d");
+    const imageData = context.createImageData(canvas.width, canvas.height);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    const getDarkValue = () => {
+        return Math.floor(Math.random() * 100);
+    };
+    const getLightValue = () => {
+        return Math.floor(Math.random() * 127) + 127;
+    };
+
+    const drawCheckerboard = () => {
+        instance.exports.colorCheckerboard(
+            getDarkValue(),
+            getDarkValue(),
+            getDarkValue(),
+            getLightValue(),
+            getLightValue(),
+            getLightValue()
+        );
+
+        const bufferOffset = instance.exports.getCheckerboardBufferPointer();
+        const imageDataArray = wasmMemoryArray.slice(
+            bufferOffset,
+            bufferOffset + checkerboardSize * checkerboardSize * 4
+        );
+
+        imageData.data.set(imageDataArray);
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.putImageData(imageData, 0, 0);
+    };
+
+    drawCheckerboard();
+    console.log(memory.buffer);
+    setInterval(() => {
+        drawCheckerboard();
+    }, 250);
+}
+initWasm();
+
+/*
+WebAssembly.instantiateStreaming(fetch("zig-out/bin/checkerboard.wasm"), importObject).then((result) => {
+    const wasmMemoryArray = new Uint8Array(memory.buffer);
 
     // Automatically set canvas size as defined in `checkerboard.zig`
     const checkerboardSize = result.instance.exports.getCheckerboardSize();
@@ -60,3 +113,4 @@ WebAssembly.instantiateStreaming(fetch("zig-out/bin/checkerboard.wasm"), importO
         drawCheckerboard();
     }, 250);
 });
+*/
