@@ -1,5 +1,5 @@
 (module
-    (import "adder" "add" (func $add (param i32 i32) (result i32)))
+    (import "adder" "add" (func $add (param i32 i32) (result i64)))
     (func $start
         ;; Call the imported "add" function with 2 and 4
         i32.const 2
